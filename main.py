@@ -24,13 +24,7 @@ Notifications = {
             "Title": "ACTIVE RUNWAY",
             "Priority": "urgent",
             "Tags": "flight_departure,skull",
-            "Actions": [
-                {
-                    "action": "view",
-                    "label": "Flight Tracker",
-                    "url": "https://flightradar24.com"
-                }
-            ]
+            'Actions': 'view, Flight Tracker, https://flightradar24.com, clear=true'
         },
         "message": "Put on ANC"
     },
