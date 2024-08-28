@@ -38,11 +38,13 @@ jobs:
     - name: Commit and push state file
       if: always()
       run: |
-        if [ -f runway_state.json ]; then
+        if git diff --quiet runway_state.json; then
+          echo "No changes in runway_state.json. Skipping commit."
+        else
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add runway_state.json
-          
+
           # Commit with a new message
           git commit -m "Updated runway_state.json with new data"
 
@@ -54,8 +56,6 @@ jobs:
 
           # Push the new commit
           git push
-        else
-          echo "runway_state.json not found. Skipping commit."
         fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
