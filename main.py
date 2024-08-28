@@ -32,7 +32,7 @@ departure = {
 radius = 5000  # meters
 maxHeight = 3000  # feet
 maxSpeed = 300  # knots
-heading_threshold = 20  # degrees tolerance for runway alignment
+heading_threshold = 10  # degrees tolerance for runway alignment
 cooldown_period = timedelta(minutes=10)  # 10 min cooldown period to determine if the last flight has already passed
 state_file = 'runway_state.json'
 notification_url = "https://ntfy.sh/uilenstede102_flight"  # Ensure the URL is valid
