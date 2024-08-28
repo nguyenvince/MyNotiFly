@@ -18,6 +18,19 @@ departure = {
 
 radius = 5000  # meters
 maxHeight = 3000  # feet
+arrival = {
+    "lat": 52.32259984929215,
+    "long": 4.948247872062269,
+    "heading": 270
+}
+departure = {
+    "lat": 52.318395577749435,
+    "long": 4.796553441787003,
+    "heading": 90
+}
+
+radius = 5000  # meters
+maxHeight = 3000  # feet
 maxSpeed = 300  # knots
 heading_threshold = 20  # degrees tolerance for runway alignment
 cooldown_period = timedelta(minutes=10)  # 10 min cooldown period to determine if the last flight has already passed
@@ -84,6 +97,23 @@ def check_flights_and_send_noti_if_exist(runway_direction):
         print(f"Failed to retrieve flight data: {e}")
         flights = []
 
+# Function to handle flight checks for either arrival or departure
+def check_flights_and_send_noti_if_exist(runway_direction):
+    # Initialize API
+    fr_api = FlightRadar24API()
+    
+    # Get bounds and fetch flights
+    try:    
+        bounds = fr_api.get_bounds_by_point(runway_direction["lat"], runway_direction["long"], radius)
+        flights = fr_api.get_flights(bounds=bounds)
+    except Exception as e:
+        print(f"Failed to retrieve flight data: {e}")
+        flights = []
+
+    # Load the current state
+    state = load_state()
+    runway_active = state['runway_active']
+    last_active_time = datetime.strptime(state['last_active'], '%Y-%m-%d %H:%M:%S') if state['last_active'] else None
     # Load the current state
     state = load_state()
     runway_active = state['runway_active']
