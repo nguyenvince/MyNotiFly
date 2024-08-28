@@ -97,19 +97,6 @@ def check_flights_and_send_noti_if_exist(runway_direction):
         print(f"Failed to retrieve flight data: {e}")
         flights = []
 
-# Function to handle flight checks for either arrival or departure
-def check_flights_and_send_noti_if_exist(runway_direction):
-    # Initialize API
-    fr_api = FlightRadar24API()
-    
-    # Get bounds and fetch flights
-    try:    
-        bounds = fr_api.get_bounds_by_point(runway_direction["lat"], runway_direction["long"], radius)
-        flights = fr_api.get_flights(bounds=bounds)
-    except Exception as e:
-        print(f"Failed to retrieve flight data: {e}")
-        flights = []
-
     # Load the current state
     state = load_state()
     runway_active = state['runway_active']
@@ -121,9 +108,11 @@ def check_flights_and_send_noti_if_exist(runway_direction):
 
     # Check for flights that meet the criteria
     flight_overhead = False
+    print("All flights: ", flights)
     for flight in flights:
         if flight.altitude <= maxHeight and flight.ground_speed <= maxSpeed and is_flight_heading_to_runway(flight.heading, runway_direction["heading"]):
             flight_overhead = True
+            print("Overhead flight: ", flight)
             break
 
     # Notification logic
