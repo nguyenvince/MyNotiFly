@@ -87,7 +87,7 @@ def send_notification(notification_content):
         # Send the request and get the response
         with urllib.request.urlopen(req) as response:
             if response.status == 200:
-                print(notification_content['headers']['Title'])
+                print("Notification sent: ", notification_content['headers']['Title'])
             else:
                 raise Exception(f"HTTP Error: {response.status} {response.reason}")
     
@@ -125,6 +125,8 @@ if __name__ == '__main__':
             if not runway_active:
                 send_notification(Notifications['active']) # send notification if this is the first flight after the runway is marked inactive
                 state['runway_active'] = True
+            else:
+                print("Notification not sent, runway has been ACTIVE for a long time")
 
             save_state(state)
             break    
@@ -136,3 +138,6 @@ if __name__ == '__main__':
                 state['runway_active'] = False
                 state['last_active'] = None
                 save_state(state)
+            else:
+                print("Notification not sent, runway has been INACTIVE for a long time")
+
