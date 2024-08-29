@@ -3,8 +3,8 @@ import os
 import urllib.request
 from datetime import datetime, timedelta
 from FlightRadar24 import FlightRadar24API
-from dotenv import load_dotenv
-load_dotenv()
+# from dotenv import load_dotenv
+# load_dotenv()
 
 arrival = {
     'lat': float(os.environ['ARRIVAL_LAT']),
