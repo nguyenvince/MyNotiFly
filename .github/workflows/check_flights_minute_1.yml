@@ -3,6 +3,15 @@ name: Run Flight Monitoring Script
 on:
   workflow_dispatch:  # Allows manual triggering of the workflow
 
+env:
+  ARRIVAL_LAT: ${{ secrets.ARRIVAL_LAT }}
+  ARRIVAL_LONG: ${{ secrets.ARRIVAL_LONG }}
+  ARRIVAL_HEADING: ${{ secrets.ARRIVAL_HEADING }}
+  DEPARTURE_LAT: ${{ secrets.DEPARTURE_LAT }}
+  DEPARTURE_LONG: ${{ secrets.DEPARTURE_LONG }}
+  DEPARTURE_HEADING: ${{ secrets.DEPARTURE_HEADING }}
+  NOTI_URL: ${{ secrets.NOTI_URL }}
+
 jobs:
   run-script:
     runs-on: ubuntu-latest

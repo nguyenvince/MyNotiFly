@@ -1,42 +1,31 @@
 import json
 import os
-import requests
+import urllib.request
 from datetime import datetime, timedelta
 from FlightRadar24 import FlightRadar24API
+from dotenv import load_dotenv
+load_dotenv()
 
-# Constants
 arrival = {
-    "lat": 52.32259984929215,
-    "long": 4.948247872062269,
-    "heading": 270
-}
-departure = {
-    "lat": 52.318395577749435,
-    "long": 4.796553441787003,
-    "heading": 90
+    'lat': float(os.environ['ARRIVAL_LAT']),
+    'long': float(os.environ['ARRIVAL_LONG']),
+    'heading': int(os.environ['ARRIVAL_HEADING']),
 }
 
-radius = 5000  # meters
-maxHeight = 3000  # feet
-arrival = {
-    "lat": 52.32259984929215,
-    "long": 4.948247872062269,
-    "heading": 270
-}
 departure = {
-    "lat": 52.318395577749435,
-    "long": 4.796553441787003,
-    "heading": 90
+    'lat': float(os.environ['DEPARTURE_LAT']),
+    'long': float(os.environ['DEPARTURE_LONG']),
+    'heading': int(os.environ['DEPARTURE_HEADING']),
 }
+noti_url = os.getenv('NOTI_URL')
 
 radius = 5000  # meters
 maxHeight = 3000  # feet
 maxSpeed = 300  # knots
 minSpeed = 100
-heading_threshold = 10  # degrees tolerance for runway alignment
+heading_tolerance = 10  # degrees tolerance for runway alignment
 cooldown_period = timedelta(minutes=10)  # 10 min cooldown period to determine if the last flight has already passed
 state_file = 'runway_state.json'
-notification_url = "https://ntfy.sh/uilenstede102_flight"  # Ensure the URL is valid
 
 Notifications = {
     "active": {
@@ -60,7 +49,7 @@ Notifications = {
 
 # Function to check if a flight is aligned with the runway
 def is_flight_heading_to_runway(heading, runway_heading):
-    return abs(heading - runway_heading) <= heading_threshold
+    return abs(heading - runway_heading) <= heading_tolerance
 
 # Function to load state
 def load_state():
@@ -79,10 +68,21 @@ def save_state(state):
 # Function to send notification
 def send_notification(notification_content):
     try:
-        response = requests.post(notification_url, data=notification_content['message'], headers=notification_content['headers'])
-        print(notification_content['headers']['Title'])
-        response.raise_for_status()  # Raises an HTTPError if the response was an error
-    except requests.RequestException as e:
+        # Convert notification content to JSON format and encode it
+        params = json.dumps(notification_content['message']).encode('utf8')
+
+        # Create the request object
+        req = urllib.request.Request(noti_url, data=params,
+                                     headers=notification_content['headers'])
+
+        # Send the request and get the response
+        with urllib.request.urlopen(req) as response:
+            if response.status == 200:
+                print(notification_content['headers']['Title'])
+            else:
+                raise Exception(f"HTTP Error: {response.status} {response.reason}")
+    
+    except Exception as e:
         print(f"Failed to send notification: {e}")
 
 # Function to handle flight checks for either arrival or departure
