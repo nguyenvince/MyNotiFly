@@ -7,16 +7,19 @@ from FlightRadar24 import FlightRadar24API
 # load_dotenv()
 
 arrival = {
+    'name': 'Arrival',
     'lat': float(os.environ['ARRIVAL_LAT']),
     'long': float(os.environ['ARRIVAL_LONG']),
     'heading': int(os.environ['ARRIVAL_HEADING']),
 }
 
 departure = {
+    'name': 'Departure',
     'lat': float(os.environ['DEPARTURE_LAT']),
     'long': float(os.environ['DEPARTURE_LONG']),
     'heading': int(os.environ['DEPARTURE_HEADING']),
 }
+
 noti_url = os.getenv('NOTI_URL')
 
 radius = 5000  # meters
@@ -46,6 +49,12 @@ Notifications = {
         "message": "Enjoy your peace"
     }
 }
+
+# Initialize API
+fr_api = FlightRadar24API()
+
+# Check for flights that meet the criteria
+flight_overhead = False
 
 # Function to check if a flight is aligned with the runway
 def is_flight_heading_to_runway(heading, runway_heading):
@@ -85,72 +94,45 @@ def send_notification(notification_content):
     except Exception as e:
         print(f"Failed to send notification: {e}")
 
-# Function to handle flight checks for either arrival or departure
-def check_flights_and_send_noti_if_exist(runway_direction):
-    # Initialize API
-    fr_api = FlightRadar24API()
-    
-    # Get bounds and fetch flights
-    try:    
-        bounds = fr_api.get_bounds_by_point(runway_direction["lat"], runway_direction["long"], radius)
-        flights = fr_api.get_flights(bounds=bounds)
-    except Exception as e:
-        print(f"Failed to retrieve flight data: {e}")
-        flights = []
-
-    # Load the current state
-    state = load_state()
-    runway_active = state['runway_active']
-    last_active_time = datetime.strptime(state['last_active'], '%Y-%m-%d %H:%M:%S') if state['last_active'] else None
-    # Load the current state
-    state = load_state()
-    runway_active = state['runway_active']
-    last_active_time = datetime.strptime(state['last_active'], '%Y-%m-%d %H:%M:%S') if state['last_active'] else None
-
-    # Check for flights that meet the criteria
-    flight_overhead = False
-    print("All flights: ", flights)
-    for flight in flights:
-        if flight.altitude <= maxHeight and flight.ground_speed <= maxSpeed and minSpeed <= flight.ground_speed and is_flight_heading_to_runway(flight.heading, runway_direction["heading"]):
-            flight_overhead = True
-            print("Overhead flight: ", flight)
-            break
-
-    # Notification logic
-    current_time = datetime.utcnow()
-
-    if flight_overhead:
-        # Update last_active time
-        state['last_active'] = current_time.strftime('%Y-%m-%d %H:%M:%S')
-
-        if not runway_active:
-            send_notification(Notifications['active'])  # Pass the dictionary
-            state['runway_active'] = True
-            save_state(state)
-            return True  # Return True if a notification was sent
-        else:
-            save_state(state)
-            return False  # Return False if a notification was not sent
-        
-    else:
-        if runway_active and (last_active_time and current_time - last_active_time > cooldown_period):
-            # Send notification that runway is no longer active
-            send_notification(Notifications['inactive'])  # Pass the dictionary
-            # Update state
-            state['runway_active'] = False
-            state['last_active'] = None
-            save_state(state)
-            return True  # Return True if a notification was sent
-        else:
-            return False  # Return False if a notification was not sent
-
 if __name__ == '__main__':
-    # Check arrival flights first
-    if check_flights_and_send_noti_if_exist(arrival):
-        print("Notification sent for arrival")
-    else:
-        # If no arrival notification was sent, check departure flights
-        if check_flights_and_send_noti_if_exist(departure):
-            print("Notification sent for departure")
+    # Load the current state
+    state = load_state()
+    runway_active = state['runway_active']
+    last_active_time = datetime.strptime(state['last_active'], '%Y-%m-%d %H:%M:%S') if state['last_active'] else None
+    current_time = datetime.now()
+
+    for runway_direction in [arrival, departure]:
+        # Get bounds and fetch flights
+        try:    
+            bounds = fr_api.get_bounds_by_point(runway_direction["lat"], runway_direction["long"], radius)
+            flights = fr_api.get_flights(bounds=bounds)
+        except Exception as e:
+            print(f"Failed to retrieve flight data: {e}")
+            flights = []
+
+        print(f"{runway_direction['name']}, all flights: {flights}")
+
+        for flight in flights:
+            if flight.altitude <= maxHeight and flight.ground_speed <= maxSpeed and minSpeed <= flight.ground_speed and is_flight_heading_to_runway(flight.heading, runway_direction["heading"]):
+                flight_overhead = True
+                print("Overhead: ", flight)
+                break # one flight is enough to trigger flight_overhead flag
+
+        # Notification logic
+        if flight_overhead:
+            state['last_active'] = current_time.strftime('%Y-%m-%d %H:%M:%S')
+
+            if not runway_active:
+                send_notification(Notifications['active']) # send notification if this is the first flight after the runway is marked inactive
+                state['runway_active'] = True
+
+            save_state(state)
+            break    
         else:
-            print("No flight")
+            if runway_active and (last_active_time and current_time - last_active_time > cooldown_period):
+                # Send notification that runway is no longer active
+                send_notification(Notifications['inactive'])  # Pass the dictionary
+                # Update state
+                state['runway_active'] = False
+                state['last_active'] = None
+                save_state(state)
