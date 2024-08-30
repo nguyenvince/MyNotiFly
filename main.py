@@ -34,7 +34,7 @@ Notifications = {
     "active": {
         "headers": {
             "Title": "ACTIVE RUNWAY",
-            "Priority": "urgent",
+            "Priority": "high",
             "Tags": "flight_departure,skull",
             'Actions': 'view, Flight Tracker, https://flightradar24.com, clear=true'
         },
@@ -43,7 +43,7 @@ Notifications = {
     "inactive": {
         "headers": {
             "Title": "Inactive Runway",
-            "Priority": "urgent",
+            "Priority": "high",
             "Tags": "white_check_mark,shushing_face"
         },
         "message": "Enjoy your peace"
@@ -81,8 +81,11 @@ def send_notification(notification_content):
         params = json.dumps(notification_content['message']).encode('utf8')
 
         # Create the request object
-        req = urllib.request.Request(noti_url, data=params,
-                                     headers=notification_content['headers'])
+        req = urllib.request.Request(
+                                        noti_url, 
+                                        data=params,
+                                        headers=notification_content['headers']
+                                    )
 
         # Send the request and get the response
         with urllib.request.urlopen(req) as response:
@@ -100,6 +103,9 @@ if __name__ == '__main__':
     runway_active = state['runway_active']
     last_active_time = datetime.strptime(state['last_active'], '%Y-%m-%d %H:%M:%S') if state['last_active'] else None
     current_time = datetime.now()
+    
+    # Flag to stop further processing once a notification is sent
+    notification_sent = False
 
     for runway_direction in [arrival, departure]:
         # Get bounds and fetch flights
@@ -116,28 +122,34 @@ if __name__ == '__main__':
             if flight.altitude <= maxHeight and flight.ground_speed <= maxSpeed and minSpeed <= flight.ground_speed and is_flight_heading_to_runway(flight.heading, runway_direction["heading"]):
                 flight_overhead = True
                 print("Overhead: ", flight)
-                break # one flight is enough to trigger flight_overhead flag
+                break  # one flight is enough to trigger flight_overhead flag
 
         # Notification logic
         if flight_overhead:
             state['last_active'] = current_time.strftime('%Y-%m-%d %H:%M:%S')
 
             if not runway_active:
-                send_notification(Notifications['active']) # send notification if this is the first flight after the runway is marked inactive
+                send_notification(Notifications['active'])  # Send notification if this is the first flight after the runway is marked inactive
                 state['runway_active'] = True
+                notification_sent = True  # Set flag to indicate a notification was sent
             else:
                 print("Notification not sent, runway has been ACTIVE for a long time")
 
             save_state(state)
-            break    
+            break  # Stop checking after sending a notification
         else:
             if runway_active and (last_active_time and current_time - last_active_time > cooldown_period):
                 # Send notification that runway is no longer active
-                send_notification(Notifications['inactive'])  # Pass the dictionary
+                send_notification(Notifications['inactive'])  # Send the inactive notification
                 # Update state
                 state['runway_active'] = False
                 state['last_active'] = None
                 save_state(state)
+                notification_sent = True  # Set flag to indicate a notification was sent
+                break  # Stop checking after sending a notification
             else:
                 print("Notification not sent, runway has been INACTIVE for a long time")
-
+                
+        # Stop the loop if a notification was sent
+        if notification_sent:
+            break
