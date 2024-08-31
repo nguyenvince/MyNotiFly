@@ -43,29 +43,3 @@ jobs:
     - name: Run Python script
       run: |
         python main.py
-
-    - name: Commit and push state file
-      if: always()
-      run: |
-        if git diff --quiet runway_state.json; then
-          echo "No changes in runway_state.json. Skipping commit."
-        else
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add runway_state.json
-
-          # Commit with a new message
-          git commit -m "Updated runway_state.json with new data"
-
-          # Fetch the latest changes from the remote
-          git fetch origin
-
-          # Merge remote changes into your branch
-          git merge origin/main --no-edit || true  # Ignore conflicts for simplicity
-
-          # Push the new commit
-          git push
-        fi
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
